@@ -18,12 +18,35 @@ def render_char_to_gradient(font_path, char, font_size, width=None):
     # Get approximate size of the character
     try:
         # For newer Pillow versions
-        bbox = font.getbbox(char)
-        char_width = bbox[2] - bbox[0]
-        char_height = bbox[3] - bbox[1]
+        char_box = font.getbbox(char)
+        char_width = char_box[2] - char_box[0]
+        char_height = char_box[3] - char_box[1]
     except AttributeError:
         # For older Pillow versions
         char_width, char_height = font.getsize(char)
+    
+    # Create an image to render the character
+    # ascent, descent = font.getmetrics()
+    # line_height = (ascent + descent) // 2;
+    j_box = font.getbbox("j")
+    line_height = j_box[3] - j_box[1]
+    zero_box = font.getbbox("0")
+    ascent = zero_box[3] - zero_box[1]
+
+    # Make it larger to get better quality before downscaling
+    scale_factor = 1
+    img_width = char_width * scale_factor
+    img_height = line_height * scale_factor
+    img = Image.new('L', (img_width, img_height), color=0)
+    draw = ImageDraw.Draw(img)
+
+    x = 0 #(scale_factor * char_width) // 2
+    y = ascent + max(0, zero_box[1] - char_box[1]) # -1 * scale_factor * char_height # -1.5 * char_height #(scale_factor * char_height) // -2
+    
+    # Draw the character
+    draw.text((x, y), char, font=font, fill=255, anchor="ls")
+    
+    # Resize image to our fixed grid size
     
     # Fixed height for grid
     grid_height = 7
@@ -31,33 +54,9 @@ def render_char_to_gradient(font_path, char, font_size, width=None):
     # Calculate width based on aspect ratio or use specified width
     if width is None:
         # Maintain aspect ratio but ensure at least 1 pixel wide
-        grid_width = max(1, round((char_width / char_height) * grid_height)) if char_height > 0 else 1
+        grid_width = max(1, round((img_width / img_height) * grid_height)) if img_height > 0 else 1
     else:
         grid_width = width
-    
-    # Create an image to render the character
-    # Make it larger to get better quality before downscaling
-    scale_factor = 4
-    img = Image.new('L', (grid_width * scale_factor, grid_height * scale_factor), color=0)
-    draw = ImageDraw.Draw(img)
-    
-    # Calculate position to center the character
-    try:
-        # For newer Pillow versions
-        bbox = font.getbbox(char)
-        char_width = bbox[2] - bbox[0]
-        char_height = bbox[3] - bbox[1]
-    except AttributeError:
-        # For older Pillow versions
-        char_width, char_height = font.getsize(char)
-    
-    x = (grid_width * scale_factor - char_width) // 2
-    y = (grid_height * scale_factor - char_height) // 2
-    
-    # Draw the character
-    draw.text((x, y), char, font=font, fill=255)
-    
-    # Resize image to our fixed grid size
     img = img.resize((grid_width, grid_height), Image.LANCZOS)
     
     # Convert to gradient grid (0-4 values)
@@ -73,9 +72,9 @@ def render_char_to_gradient(font_path, char, font_size, width=None):
     
     return gradient_grid
 
-def format_binary_grid(gradient_grid):
+def format_grid(gradient_grid):
     """Format a gradient grid as a string of values from 0-4."""
-    return '\n'.join(''.join(str(cell) for cell in row) for row in gradient_grid)
+    return "[[" + '],\n['.join(','.join(str(cell) for cell in row) for row in gradient_grid) + "]]"
 
 def render_charset(font_path, font_size, start_char=32, end_char=127, fixed_width=None):
     """Render a range of characters from the font and return their gradient grids."""
@@ -99,8 +98,8 @@ def save_to_file(gradient_data, output_file):
             else:
                 char_repr = f"'{char}'"
             
-            f.write(f"Character: {char_repr} (ASCII: {ord(char)})\n")
-            f.write(format_binary_grid(grid))
+            f.write(f"{char}:\n")
+            f.write(format_grid(grid))
             f.write('\n\n')
 
 def main():
