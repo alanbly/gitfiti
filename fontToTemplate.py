@@ -3,9 +3,9 @@ import sys
 import argparse
 from PIL import Image, ImageDraw, ImageFont
 
-def render_char_to_binary(font_path, char, font_size, width=None):
+def render_char_to_gradient(font_path, char, font_size, width=None):
     """
-    Render a character to a binary grid representation using the specified font.
+    Render a character to a gradient grid representation (0-4) using the specified font.
     The height is fixed at 7 pixels, and the width is calculated based on aspect ratio.
     """
     # Create a font object with the specified size
@@ -60,40 +60,40 @@ def render_char_to_binary(font_path, char, font_size, width=None):
     # Resize image to our fixed grid size
     img = img.resize((grid_width, grid_height), Image.LANCZOS)
     
-    # Convert to binary grid (0s and 1s)
-    threshold = 128  # Threshold for determining binary value
-    binary_grid = []
+    # Convert to gradient grid (0-4 values)
+    gradient_grid = []
     for y in range(grid_height):
         row = []
         for x in range(grid_width):
             pixel = img.getpixel((x, y))
-            binary_value = 1 if pixel >= threshold else 0
-            row.append(binary_value)
-        binary_grid.append(row)
+            # Map 0-255 range to 0-4 gradient (5 levels)
+            gradient_value = pixel * 4 // 255
+            row.append(gradient_value)
+        gradient_grid.append(row)
     
-    return binary_grid
+    return gradient_grid
 
-def format_binary_grid(binary_grid):
-    """Format a binary grid as a string of 0s and 1s."""
-    return '\n'.join(''.join(str(cell) for cell in row) for row in binary_grid)
+def format_binary_grid(gradient_grid):
+    """Format a gradient grid as a string of values from 0-4."""
+    return '\n'.join(''.join(str(cell) for cell in row) for row in gradient_grid)
 
 def render_charset(font_path, font_size, start_char=32, end_char=127, fixed_width=None):
-    """Render a range of characters from the font and return their binary grids."""
+    """Render a range of characters from the font and return their gradient grids."""
     result = {}
     for char_code in range(start_char, end_char + 1):
         char = chr(char_code)
         try:
-            binary_grid = render_char_to_binary(font_path, char, font_size, fixed_width)
-            result[char] = binary_grid
+            gradient_grid = render_char_to_gradient(font_path, char, font_size, fixed_width)
+            result[char] = gradient_grid
         except Exception as e:
             print(f"Warning: Error rendering character '{char}' (code {char_code}): {e}")
     
     return result
 
-def save_to_file(binary_data, output_file):
-    """Save the binary grid data to a file."""
+def save_to_file(gradient_data, output_file):
+    """Save the gradient grid data to a file."""
     with open(output_file, 'w') as f:
-        for char, grid in binary_data.items():
+        for char, grid in gradient_data.items():
             if char in '\'"\\':  # Handle special characters
                 char_repr = repr(char)
             else:
@@ -104,13 +104,13 @@ def save_to_file(binary_data, output_file):
             f.write('\n\n')
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert a TTF font to binary grid representations')
+    parser = argparse.ArgumentParser(description='Convert a TTF font to gradient grid representations (0-4)')
     parser.add_argument('font_path', help='Path to the TTF font file')
     parser.add_argument('--size', type=int, default=20, help='Font size to use for rendering (default: 20)')
     parser.add_argument('--start', type=int, default=32, help='Starting ASCII character code (default: 32)')
     parser.add_argument('--end', type=int, default=127, help='Ending ASCII character code (default: 127)')
     parser.add_argument('--width', type=int, help='Fixed width for all characters (default: calculated from aspect ratio)')
-    parser.add_argument('--output', '-o', default='font_binary.txt', help='Output file (default: font_binary.txt)')
+    parser.add_argument('--output', '-o', default='font_gradient.txt', help='Output file (default: font_gradient.txt)')
     
     args = parser.parse_args()
     
@@ -118,13 +118,13 @@ def main():
     print(f"Rendering characters from ASCII {args.start} to {args.end}")
     
     # Render all characters
-    binary_data = render_charset(args.font_path, args.size, args.start, args.end, args.width)
+    gradient_data = render_charset(args.font_path, args.size, args.start, args.end, args.width)
     
     # Save to file
-    save_to_file(binary_data, args.output)
+    save_to_file(gradient_data, args.output)
     
-    print(f"Binary grid data saved to: {args.output}")
-    print(f"Processed {len(binary_data)} characters")
+    print(f"Gradient grid data saved to: {args.output}")
+    print(f"Processed {len(gradient_data)} characters")
 
 if __name__ == "__main__":
     main()
