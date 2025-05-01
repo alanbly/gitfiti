@@ -425,6 +425,21 @@ def request_user_input(prompt='> '):
     return raw_input(prompt)
 
 
+def image_name_to_array(images, image) :
+    image_fallback = images[FALLBACK_IMAGE]
+    try:
+        if not image:
+            return image_fallback
+        else:
+            return images[image]
+    except:
+        return image_fallback
+
+
+def merge_images(images):
+    return images.reduce(lambda x, y: [a + b for (a, b) in zip(x, y)], images)
+
+
 def main():
     print(TITLE)
 
@@ -469,19 +484,19 @@ def main():
     loaded_images = load_images(img_names)
     images = dict(IMAGES, **loaded_images)
 
-    print('Enter the image name to gitfiti')
-    print('Images: ' + ', '.join(images.keys()))
-    image = request_user_input()
+    print('What mode should we use (single, multi, text)')
+    mode = request_user_input()
 
-    image_name_fallback = FALLBACK_IMAGE
-
-    if not image:
-        image = IMAGES[image_name_fallback]
+    if mode == 'text':
+        print('Enter the text you want')
+        text = request_user_input()
+        image_list = list(text)
     else:
-        try:
-            image = images[image]
-        except:
-            image = IMAGES[image_name_fallback]
+        print('Enter the image name(s) to gitfiti')
+        print('Images: ' + ', '.join([key.trim() foo key in images.keys()]))
+        image_list = request_user_input().split(' ')
+
+    image = merge_images([image_name_to_array(images, image) for image in image_list])
 
     start_date = get_start_date()
     fake_it_multiplier = m * match

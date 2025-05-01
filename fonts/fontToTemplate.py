@@ -93,12 +93,10 @@ def save_to_file(gradient_data, output_file):
     """Save the gradient grid data to a file."""
     with open(output_file, 'w') as f:
         for char, grid in gradient_data.items():
-            if char in '\'"\\':  # Handle special characters
-                char_repr = repr(char)
-            else:
-                char_repr = f"'{char}'"
+            if char == ' ':
+                char = 'space'
             
-            f.write(f"{char}:\n")
+            f.write(f":{char}\n")
             f.write(format_grid(grid))
             f.write('\n\n')
 
